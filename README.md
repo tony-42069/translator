@@ -1,6 +1,24 @@
 # Real-Time Albanian-English Voice Translator
 
-A powerful mobile application that enables seamless real-time voice translation between Albanian and English. Built with React Native for optimal performance and user experience.
+![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red.svg)
+![Status: Under Development](https://img.shields.io/badge/Status-Under%20Development-yellow.svg)
+![Platform: Mobile](https://img.shields.io/badge/Platform-Mobile-blue.svg)
+![React Native](https://img.shields.io/badge/React%20Native-v0.72.4-61dafb.svg)
+![Stage: Alpha](https://img.shields.io/badge/Stage-Alpha-orange.svg)
+![Mobile: Android & iOS](https://img.shields.io/badge/Mobile-Android%20%7C%20iOS-green.svg)
+![PRs: Not Accepted](https://img.shields.io/badge/PRs-Not%20Accepted-red.svg)
+![Powered by: AI](https://img.shields.io/badge/Powered%20by-AI-blueviolet.svg)
+![Build: Passing](https://img.shields.io/badge/Build-Passing-success.svg)
+
+Breaking down language barriers through cutting-edge voice translation technology. This innovative mobile application delivers real-time, natural-sounding translations between Albanian and English, powered by advanced AI and state-of-the-art voice processing algorithms. Featuring ultra-low latency processing, native mobile experience, and enterprise-grade security, this solution transforms how people communicate across Albanian and English languages.
+
+Key Highlights:
+- 🚀 Real-time voice processing
+- 🎯 High accuracy translations
+- 🗣️ Natural voice synthesis
+- ⚡ Lightning-fast performance
+- 🔒 Enterprise-grade security
+- 📱 Native mobile experience
 
 ## Features
 
