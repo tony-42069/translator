@@ -1,26 +1,38 @@
 # Albanian Translator
 
-A React-based application that provides real-time Albanian language translation services with speech recognition capabilities.
+[![React](https://img.shields.io/badge/React-18.2.0-blue.svg)](https://reactjs.org/)
+[![Chakra UI](https://img.shields.io/badge/Chakra%20UI-2.10.4-teal.svg)](https://chakra-ui.com/)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+
+> A powerful, real-time Albanian language translation platform with speech recognition capabilities, built with modern web technologies.
+
+![Albanian Translator Demo](demo-placeholder.gif)
 
 ## Features
 
-- Real-time speech recognition
-- Albanian language translation
-- Text-to-speech functionality using ElevenLabs
-- Modern UI built with Chakra UI
-- WebRTC support for real-time communication
+- Real-time Speech Recognition - Instantly capture and transcribe spoken words
+- Bidirectional Translation - Seamless translation between Albanian and other languages
+- Text-to-Speech - High-quality voice output powered by ElevenLabs
+- Modern UI/UX - Beautiful, responsive interface built with Chakra UI
+- WebRTC Support - Real-time communication capabilities
+- Cross-Platform - Works on all modern browsers and devices
 
-## Prerequisites
+## Quick Start
 
-Before you begin, ensure you have installed:
+### Prerequisites
+
 - Node.js (v12 or higher)
 - npm (comes with Node.js)
+- Google Translate API key
+- ElevenLabs API key (for text-to-speech)
 
-## Installation
+### Installation
 
 1. Clone the repository:
 ```bash
-git clone [your-repository-url]
+git clone https://github.com/tony-42069/translator.git
+cd translator
 ```
 
 2. Install dependencies:
@@ -28,52 +40,82 @@ git clone [your-repository-url]
 npm install
 ```
 
-3. Create a `.env` file in the root directory and add your API keys:
+3. Configure environment variables:
+   - Create a `.env` file in the root directory
+   - Add your API keys:
 ```
 REACT_APP_GOOGLE_TRANSLATE_API_KEY=your_google_translate_api_key
 ```
 
-## Running the Application
-
-To start the development server:
+4. Start the development server:
 ```bash
 npm start
 ```
 
-The application will be available at `http://localhost:3000`
+Visit `http://localhost:3000` to see the application in action!
 
-## Project Structure
+## Architecture
 
 ```
 albanian-translator/
 ├── src/
-│   ├── components/      # React components
-│   ├── services/        # Service layer (translation, speech recognition)
-│   ├── App.js          # Main application component
-│   └── index.js        # Application entry point
-├── public/             # Static files
-└── package.json        # Project dependencies and scripts
+│   ├── components/        # Reusable UI components
+│   │   ├── TranslationBox/
+│   │   └── SpeechControls/
+│   ├── services/         # Business logic and API integrations
+│   │   ├── TranslationService.js
+│   │   └── ElevenLabsService.js
+│   ├── hooks/           # Custom React hooks
+│   ├── utils/           # Helper functions and constants
+│   ├── App.js           # Main application component
+│   └── index.js         # Application entry point
+├── public/              # Static assets
+└── config/             # Configuration files
 ```
 
-## Technologies Used
+## Technology Stack
 
-- React 18.2.0
-- Chakra UI
-- Google Translate API
-- WebRTC
-- ElevenLabs API
+- Frontend Framework: React 18.2.0
+- UI Library: Chakra UI
+- Translation: Google Cloud Translation API
+- Speech Recognition: Web Speech API
+- Text-to-Speech: ElevenLabs API
+- Real-time Communication: WebRTC
+- State Management: React Context API
+- Build Tool: Webpack
 
-## Development
+## Security
 
-The application uses environment variables for API keys. Make sure to:
-- Never commit the `.env` file
-- Keep API keys secure
-- Use the development environment for testing
+- Environment variables are used for API key management
+- HTTPS encryption for all API communications
+- Input sanitization and validation
+- Rate limiting implementation
+- Regular security audits and updates
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+We welcome contributions! Please follow these steps:
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support
+
+For support, email [support@albanian-translator.com](mailto:support@albanian-translator.com) or join our [Discord community](https://discord.gg/albanian-translator).
+
+## Acknowledgments
+
+- Google Cloud Platform for translation services
+- ElevenLabs for text-to-speech capabilities
+- The amazing open-source community
+
+---
+
+<p align="center">Made with ❤️ for the Albanian community</p>
