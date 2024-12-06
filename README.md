@@ -106,10 +106,6 @@ We welcome contributions! Please follow these steps:
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Support
-
-For support, email [support@albanian-translator.com](mailto:support@albanian-translator.com) or join our [Discord community](https://discord.gg/albanian-translator).
-
 ## Acknowledgments
 
 - Google Cloud Platform for translation services
