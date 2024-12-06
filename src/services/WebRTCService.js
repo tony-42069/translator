@@ -9,102 +9,79 @@ class WebRTCService {
     this.onDataCallback = null;
     this.onStreamCallback = null;
     this.onErrorCallback = null;
+    this.onConnectedCallback = null;
     this.isConnected = false;
     this.pendingCandidates = [];
   }
 
-  async initialize(initiator = false) {
+  async initialize(initiator = true) {
     try {
       console.log(`🎯 Initializing as ${initiator ? 'initiator' : 'joiner'}`);
       
-      this.stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: true,
-        video: false
-      });
+      // Get audio stream
+      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       console.log('🎤 Got audio stream');
 
-      return new Promise((resolve) => {
-        this.peer = new SimplePeer({
-          initiator,
-          stream: this.stream,
-          trickle: false,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              {
-                urls: 'turn:numb.viagenie.ca',
-                username: 'webrtc@live.com',
-                credential: 'muazkh'
-              }
-            ]
-          }
-        });
-
-        // Set up event handlers
-        this.peer.on('signal', data => {
-          console.log('📡 Generated signal:', data.type);
-          if (this.onConnectionCallback) {
-            this.onConnectionCallback(JSON.stringify(data));
-          }
-        });
-
-        this.peer.on('connect', () => {
-          console.log('🌟 Peer connection established!');
-          this.isConnected = true;
-          if (this.onDataCallback) {
-            this.onDataCallback(JSON.stringify({
-              type: 'connected',
-              message: 'Connection established'
-            }));
-          }
-          // Send test data to verify connection
-          this.peer.send(JSON.stringify({ type: 'test', message: 'Testing connection' }));
-        });
-
-        this.peer.on('data', data => {
-          console.log('📩 Received data:', data.toString());
-          if (this.onDataCallback) {
-            this.onDataCallback(data.toString());
-          }
-        });
-
-        this.peer.on('stream', stream => {
-          console.log('🔊 Received remote audio stream');
-          if (this.onStreamCallback) {
-            this.onStreamCallback(stream);
-          }
-        });
-
-        this.peer.on('error', error => {
-          console.error('❌ Peer error:', error);
-          this.handleError(error);
-        });
-
-        this.peer.on('close', () => {
-          console.log('👋 Connection closed');
-          this.isConnected = false;
-          if (this.onDataCallback) {
-            this.onDataCallback(JSON.stringify({ type: 'disconnected' }));
-          }
-        });
-
-        // Add debugging for connection state changes
-        if (this.peer._pc) {
-          this.peer._pc.onconnectionstatechange = () => {
-            console.log('📊 Connection state:', this.peer._pc.connectionState);
-          };
-
-          this.peer._pc.oniceconnectionstatechange = () => {
-            console.log('🧊 ICE connection state:', this.peer._pc.iceConnectionState);
-          };
-
-          this.peer._pc.onicegatheringstatechange = () => {
-            console.log('❄️ ICE gathering state:', this.peer._pc.iceGatheringState);
-          };
+      // Initialize peer with ICE servers
+      this.peer = new SimplePeer({
+        initiator,
+        stream: this.stream,
+        trickle: true,
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            {
+              urls: 'turn:a.relay.metered.ca:80',
+              username: '83eebabf8b4cce8ed1b3a84a',
+              credential: 'uGOKT6HPQQXMrZJv',
+            },
+            {
+              urls: 'turn:a.relay.metered.ca:443',
+              username: '83eebabf8b4cce8ed1b3a84a',
+              credential: 'uGOKT6HPQQXMrZJv',
+            },
+            {
+              urls: 'turn:a.relay.metered.ca:443?transport=tcp',
+              username: '83eebabf8b4cce8ed1b3a84a',
+              credential: 'uGOKT6HPQQXMrZJv',
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:80',
+              username: 'openrelayproject',
+              credential: 'openrelayproject',
+            },
+            {
+              urls: 'turn:openrelay.metered.ca:443',
+              username: 'openrelayproject',
+              credential: 'openrelayproject',
+            }
+          ],
+          iceCandidatePoolSize: 10,
+          iceTransportPolicy: 'all'
+        },
+        sdpTransform: (sdp) => {
+          // Add additional codec support
+          return sdp.replace('useinbandfec=1', 'useinbandfec=1; stereo=1; maxaveragebitrate=510000');
         }
-
-        resolve(true);
       });
+
+      // Set up peer event handlers
+      this.peer.on('error', this.handleError.bind(this));
+      this.peer.on('signal', this.handleSignal.bind(this));
+      this.peer.on('connect', () => {
+        console.log('🔗 Peer connection established!');
+        this.isConnected = true;
+        if (this.onConnectedCallback) this.onConnectedCallback();
+      });
+      this.peer.on('data', this.handleData.bind(this));
+      this.peer.on('stream', this.handleStream.bind(this));
+      this.peer.on('close', this.cleanup.bind(this));
+
+      return true;
     } catch (error) {
       console.error('❌ Initialization failed:', error);
       this.handleError(error);
@@ -122,13 +99,75 @@ class WebRTCService {
       const signal = JSON.parse(signalData);
       
       console.log(`📥 Received signal: ${signal.type}`);
-      this.peer.signal(signal);
       
-      return true;
+      return new Promise((resolve, reject) => {
+        let connectionTimeout;
+        let retryCount = 0;
+        const maxRetries = 3;
+        
+        const cleanup = () => {
+          if (connectionTimeout) clearTimeout(connectionTimeout);
+          this.peer.removeListener('connect', handleConnect);
+          this.peer.removeListener('error', handleError);
+        };
+
+        const handleConnect = () => {
+          console.log('✅ Connection successful!');
+          cleanup();
+          resolve(true);
+        };
+
+        const handleError = (err) => {
+          console.error('❌ Connection error:', err);
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`Retrying connection (attempt ${retryCount}/${maxRetries})...`);
+            // Re-process the signal
+            this.peer.signal(signal);
+          } else {
+            cleanup();
+            reject(err);
+          }
+        };
+
+        // Set connection timeout (30 seconds total including retries)
+        connectionTimeout = setTimeout(() => {
+          cleanup();
+          reject(new Error('Connection timeout - this could be due to NAT/firewall restrictions. Please check your firewall settings and try again.'));
+        }, 30000);
+
+        // Add temporary event listeners
+        this.peer.once('connect', handleConnect);
+        this.peer.on('error', handleError);
+
+        // Process the signal
+        this.peer.signal(signal);
+      });
     } catch (error) {
       console.error('❌ Connection attempt failed:', error);
       this.handleError(error);
-      return false;
+      throw error;
+    }
+  }
+
+  handleSignal(data) {
+    console.log('📡 Generated signal:', data.type);
+    if (this.onConnectionCallback) {
+      this.onConnectionCallback(JSON.stringify(data));
+    }
+  }
+
+  handleData(data) {
+    console.log('📩 Received data:', data.toString());
+    if (this.onDataCallback) {
+      this.onDataCallback(data.toString());
+    }
+  }
+
+  handleStream(stream) {
+    console.log('🔊 Received remote audio stream');
+    if (this.onStreamCallback) {
+      this.onStreamCallback(stream);
     }
   }
 
@@ -175,11 +214,12 @@ class WebRTCService {
     console.log('✨ Cleanup complete');
   }
 
-  setCallbacks(onConnection, onData, onStream, onError) {
+  setCallbacks(onConnection, onData, onStream, onError, onConnected) {
     this.onConnectionCallback = onConnection;
     this.onDataCallback = onData;
     this.onStreamCallback = onStream;
     this.onErrorCallback = onError;
+    this.onConnectedCallback = onConnected;
   }
 
   isCallActive() {

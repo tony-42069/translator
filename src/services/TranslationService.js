@@ -1,7 +1,5 @@
 // src/services/TranslationService.js
 import ElevenLabsService from './ElevenLabsService';
-import 'dotenv/config'; // Use ES6 import since your code seems to use modern JavaScript syntax
-
 
 class TranslationService {
     constructor() {
@@ -10,7 +8,11 @@ class TranslationService {
         this.onResultCallback = null;
         this.onErrorCallback = null;
         this.currentLanguage = 'sq-AL'; // Default to Albanian
-        this.GOOGLE_API_KEY = process.env.REACT_APP_GOOGLE_TRANSLATE_API_KEY; // Securely load the key
+        // Get API key from React environment variable
+        this.apiKey = process.env.REACT_APP_GOOGLE_TRANSLATE_API_KEY;
+        if (!this.apiKey) {
+          console.error('Google Translate API key not found in environment variables');
+        }
         this.lastProcessedText = '';
         this.processingQueue = [];
         this.isProcessing = false;
@@ -88,9 +90,13 @@ class TranslationService {
 
   async translate(text, sourceLang, targetLang) {
     try {
+      if (!this.apiKey) {
+        throw new Error('Google Translate API key not found. Please check your environment variables.');
+      }
+
       console.log(`Translating from ${sourceLang} to ${targetLang}: ${text}`);
       const response = await fetch(
-        `https://translation.googleapis.com/language/translate/v2?key=${this.GOOGLE_API_KEY}`,
+        `https://translation.googleapis.com/language/translate/v2?key=${this.apiKey}`,
         {
           method: 'POST',
           headers: {
@@ -105,12 +111,14 @@ class TranslationService {
         }
       );
 
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error.message || 'Translation failed');
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Translation API response:', errorData);
+        throw new Error(errorData.error?.message || `Translation failed with status: ${response.status}`);
       }
 
+      const data = await response.json();
+      console.log('Translation response:', data);
       return data.data.translations[0].translatedText;
     } catch (error) {
       console.error('Translation error:', error);

@@ -2,7 +2,10 @@
 
 class ElevenLabsService {
   constructor() {
-    this.API_KEY = 'sk_9580cf8a87cd2ba112a7757a091d2300eb75e20776616553';
+    this.API_KEY = process.env.REACT_APP_ELEVENLABS_API_KEY;
+    if (!this.API_KEY) {
+      console.error('ElevenLabs API key not found in environment variables');
+    }
     this.API_URL = 'https://api.elevenlabs.io/v1';
     this.voice_id = '21m00Tcm4TlvDq8ikWAM'; // Rachel voice
   }

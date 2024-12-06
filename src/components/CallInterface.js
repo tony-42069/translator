@@ -63,53 +63,49 @@ function CallInterface({ isOpen, onClose, onCallStart }) {
   const setupCallHandlers = () => {
     console.log('Setting up call handlers');
     WebRTCService.setCallbacks(
-      handleConnection,
-      handleData,
-      handleStream,
-      handleError
-    );
-  };
-
-  const handleConnection = (data) => {
-    console.log('Connection data received:', data);
-    setConnectionId(data);
-  };
-
-  const handleData = (data) => {
-    try {
-      const parsedData = JSON.parse(data);
-      console.log('Received data:', parsedData);
-      
-      if (parsedData.type === 'connected') {
-        console.log('Connection confirmed');
-        setIsConnected(true);
-        setIsConnecting(false);
-      } else if (parsedData.type === 'disconnected') {
-        console.log('Disconnection detected');
-        setIsConnected(false);
-        setIsConnecting(false);
+      // Connection signal callback
+      (signal) => {
+        console.log('Got connection signal');
+        setConnectionId(signal);
+      },
+      // Data callback
+      (data) => {
+        console.log('Received data:', data);
+        const parsedData = JSON.parse(data);
+        if (parsedData.type === 'translation') {
+          // Handle translation data
+          console.log('Received translation:', parsedData.text);
+        }
+      },
+      // Stream callback
+      (stream) => {
+        console.log('Received audio stream');
+        const audio = new Audio();
+        audio.srcObject = stream;
+        audio.play().catch(console.error);
+      },
+      // Error callback
+      (error) => {
+        console.error('WebRTC error:', error);
+        toast({
+          title: 'Connection Error',
+          description: error.message,
+          status: 'error',
+          duration: 5000,
+        });
+      },
+      // Connected callback
+      () => {
+        console.log('Connection established!');
+        toast({
+          title: 'Connected!',
+          description: 'Call connection established successfully',
+          status: 'success',
+          duration: 3000,
+        });
+        onCallStart();
       }
-    } catch (e) {
-      console.error('Error parsing data:', e);
-    }
-  };
-
-  const handleStream = (stream) => {
-    console.log('Audio stream received');
-    if (audioRef.current) {
-      audioRef.current.srcObject = stream;
-    }
-  };
-
-  const handleError = (error) => {
-    console.error('Call error:', error);
-    toast({
-      title: 'Call Error',
-      description: error.message,
-      status: 'error',
-      duration: 5000,
-    });
-    setIsConnecting(false);
+    );
   };
 
   const startCall = async () => {
@@ -144,25 +140,25 @@ function CallInterface({ isOpen, onClose, onCallStart }) {
     console.log('Joining call as peer');
     setIsConnecting(true);
     
-    const success = await WebRTCService.initialize(false);
-    if (success) {
-      console.log('Initialized peer, attempting connection');
-      const connected = WebRTCService.connect(peerCode);
-      if (!connected) {
+    try {
+      const success = await WebRTCService.initialize(false);
+      if (success) {
+        console.log('Initialized peer, attempting connection');
+        await WebRTCService.connect(peerCode);
         toast({
-          title: 'Connection Failed',
-          description: 'Failed to establish connection',
-          status: 'error',
+          title: 'Connected!',
+          description: 'Successfully joined the call',
+          status: 'success',
           duration: 3000,
         });
-        setIsConnecting(false);
       }
-    } else {
+    } catch (error) {
+      console.error('Failed to join call:', error);
       toast({
-        title: 'Initialization Failed',
-        description: 'Failed to initialize connection',
+        title: 'Connection Failed',
+        description: error.message || 'Failed to establish connection',
         status: 'error',
-        duration: 3000,
+        duration: 5000,
       });
       setIsConnecting(false);
     }
