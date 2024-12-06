@@ -118,4 +118,11 @@ For support, email [support@albanian-translator.com](mailto:support@albanian-tra
 
 ---
 
-<p align="center">Made with ❤️ for the Albanian community</p>
+{{ 
+  ElevenLabs for text-to-speech capabilities
+  The amazing open-source community
+}}
+
+---
+
+ 2024 Albanian Translator. All rights reserved.
