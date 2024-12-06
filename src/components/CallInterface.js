@@ -1,262 +1,159 @@
 // src/components/CallInterface.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
+  Box,
   Button,
-  VStack,
-  HStack,
   Text,
   useToast,
+  VStack,
+  HStack,
   Modal,
   ModalOverlay,
   ModalContent,
   ModalHeader,
   ModalBody,
-  ModalFooter,
-  Input,
-  useClipboard,
+  ModalCloseButton,
 } from '@chakra-ui/react';
-import WebRTCService from '../services/WebRTCService';
+import { PhoneIcon, WarningIcon } from '@chakra-ui/icons';
+import CallService from '../services/CallService';
 
-function CallInterface({ isOpen, onClose, onCallStart }) {
-  const [connectionId, setConnectionId] = useState('');
-  const [isInitiator, setIsInitiator] = useState(false);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-  const [peerCode, setPeerCode] = useState('');
-  const audioRef = useRef(null);
+const CallInterface = () => {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [originalText, setOriginalText] = useState('');
+  const [translatedText, setTranslatedText] = useState('');
   const toast = useToast();
-  const { onCopy } = useClipboard(connectionId);
 
-  // Setup effect - runs when modal opens
   useEffect(() => {
-    if (isOpen) {
+    if (isModalOpen) {
       console.log('Modal opened - setting up handlers');
       setupCallHandlers();
     }
-  }, [isOpen]);
-
-  // Connection status effect
-  useEffect(() => {
-    if (isConnected) {
-      console.log('Connection established - transitioning to translation');
-      toast({
-        title: 'Connected!',
-        description: 'You can start talking now',
-        status: 'success',
-        duration: 3000,
-      });
-      onCallStart();
-      onClose();
-    }
-  }, [isConnected]);
-
-  // Cleanup effect
-  useEffect(() => {
-    return () => {
-      if (!isConnected) {
-        console.log('Cleaning up unsuccessful connection');
-        WebRTCService.cleanup();
-      }
-    };
-  }, [isConnected]);
+  }, [isModalOpen]);
 
   const setupCallHandlers = () => {
     console.log('Setting up call handlers');
-    WebRTCService.setCallbacks(
-      // Connection signal callback
-      (signal) => {
-        console.log('Got connection signal');
-        setConnectionId(signal);
+    CallService.setCallbacks(
+      (original, translated) => {
+        setOriginalText(original);
+        setTranslatedText(translated);
       },
-      // Data callback
-      (data) => {
-        console.log('Received data:', data);
-        const parsedData = JSON.parse(data);
-        if (parsedData.type === 'translation') {
-          // Handle translation data
-          console.log('Received translation:', parsedData.text);
-        }
-      },
-      // Stream callback
-      (stream) => {
-        console.log('Received audio stream');
-        const audio = new Audio();
-        audio.srcObject = stream;
-        audio.play().catch(console.error);
-      },
-      // Error callback
-      (error) => {
-        console.error('WebRTC error:', error);
+      (userId) => {
         toast({
-          title: 'Connection Error',
-          description: error.message,
-          status: 'error',
-          duration: 5000,
-        });
-      },
-      // Connected callback
-      () => {
-        console.log('Connection established!');
-        toast({
-          title: 'Connected!',
-          description: 'Call connection established successfully',
-          status: 'success',
+          title: 'User Joined',
+          description: `User ${userId} joined the call`,
+          status: 'info',
           duration: 3000,
         });
-        onCallStart();
+      },
+      (userId) => {
+        toast({
+          title: 'User Left',
+          description: `User ${userId} left the call`,
+          status: 'info',
+          duration: 3000,
+        });
       }
     );
   };
 
   const startCall = async () => {
-    console.log('Starting new call as initiator');
-    setIsInitiator(true);
-    setIsConnecting(true);
-    
-    const success = await WebRTCService.initialize(true);
-    if (success) {
-      toast({
-        title: 'Call Started',
-        description: 'Share the connection code with the other person',
-        status: 'success',
-        duration: 3000,
-      });
-    } else {
-      setIsConnecting(false);
-      setIsInitiator(false);
-    }
-  };
-
-  const joinCall = async () => {
-    if (!peerCode) {
-      toast({
-        title: 'Error',
-        description: 'Please enter a connection code',
-        status: 'error',
-      });
-      return;
-    }
-
-    console.log('Joining call as peer');
-    setIsConnecting(true);
+    console.log('Starting call...');
+    const callId = 'test-call-' + Math.random().toString(36).substr(2, 9);
     
     try {
-      const success = await WebRTCService.initialize(false);
+      const success = await CallService.startCall(callId);
       if (success) {
-        console.log('Initialized peer, attempting connection');
-        await WebRTCService.connect(peerCode);
+        setIsCallActive(true);
         toast({
-          title: 'Connected!',
-          description: 'Successfully joined the call',
+          title: 'Call Started',
+          description: 'You can now speak and see translations',
           status: 'success',
           duration: 3000,
         });
+      } else {
+        throw new Error('Failed to start call');
       }
     } catch (error) {
-      console.error('Failed to join call:', error);
+      console.error('Error starting call:', error);
       toast({
-        title: 'Connection Failed',
-        description: error.message || 'Failed to establish connection',
+        title: 'Call Failed',
+        description: error.message,
         status: 'error',
         duration: 5000,
+        isClosable: true,
       });
-      setIsConnecting(false);
     }
   };
 
   const endCall = () => {
-    console.log('Ending call');
-    if (!isConnected) {
-      WebRTCService.cleanup();
-    }
-    setIsConnected(false);
-    setIsConnecting(false);
-    setIsInitiator(false);
-    setPeerCode('');
-    setConnectionId('');
-    onClose();
-  };
-
-  const copyConnectionId = () => {
-    onCopy();
+    CallService.endCall();
+    setIsCallActive(false);
+    setOriginalText('');
+    setTranslatedText('');
     toast({
-      title: 'Copied!',
-      description: 'Connection code copied to clipboard',
-      status: 'success',
-      duration: 2000,
+      title: 'Call Ended',
+      status: 'info',
+      duration: 3000,
     });
   };
 
-  const renderContent = () => {
-    if (isConnected) {
-      return (
-        <Text color="green.500" fontWeight="bold">
-          Connected! You can start talking.
-        </Text>
-      );
-    }
-
-    if (!isConnecting && !isConnected) {
-      return (
-        <HStack width="100%" justifyContent="space-between">
-          <Button colorScheme="blue" onClick={startCall}>
-            Start New Call
-          </Button>
-          <Text>or</Text>
-          <Button colorScheme="green" onClick={() => setIsConnecting(true)}>
-            Join Existing Call
-          </Button>
-        </HStack>
-      );
-    }
-
-    if (isConnecting && !isConnected) {
-      if (isInitiator) {
-        return (
-          <VStack width="100%" spacing={4}>
-            <Text>Share this connection code:</Text>
-            <Input value={connectionId} isReadOnly />
-            <Button onClick={copyConnectionId}>
-              Copy Connection Code
-            </Button>
-          </VStack>
-        );
-      }
-      return (
-        <VStack width="100%" spacing={4}>
-          <Text>Enter connection code:</Text>
-          <Input
-            value={peerCode}
-            onChange={(e) => setPeerCode(e.target.value)}
-            placeholder="Paste connection code here"
-          />
-          <Button colorScheme="green" onClick={joinCall}>
-            Join Call
-          </Button>
-        </VStack>
-      );
-    }
-  };
-
   return (
-    <Modal isOpen={isOpen} onClose={endCall} size="md">
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Start Translation Call</ModalHeader>
-        <ModalBody>
-          <VStack spacing={4}>
-            {renderContent()}
-          </VStack>
-          <audio ref={audioRef} autoPlay playsInline />
-        </ModalBody>
-        <ModalFooter>
-          <Button colorScheme="red" onClick={endCall}>
-            End Call
-          </Button>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+    <>
+      <Button
+        leftIcon={<PhoneIcon />}
+        colorScheme={isCallActive ? 'red' : 'green'}
+        onClick={() => setIsModalOpen(true)}
+      >
+        {isCallActive ? 'View Active Call' : 'Start New Call'}
+      </Button>
+
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} size="xl">
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Translation Call</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <VStack spacing={4} align="stretch">
+              <Box>
+                <Button
+                  colorScheme={isCallActive ? 'red' : 'green'}
+                  onClick={isCallActive ? endCall : startCall}
+                  width="100%"
+                  mb={4}
+                >
+                  {isCallActive ? 'End Call' : 'Start Call'}
+                </Button>
+              </Box>
+
+              {isCallActive && (
+                <Box>
+                  <Text fontWeight="bold" mb={2}>Original Text:</Text>
+                  <Box p={3} bg="gray.100" borderRadius="md" mb={4}>
+                    {originalText || 'Waiting for speech...'}
+                  </Box>
+
+                  <Text fontWeight="bold" mb={2}>Translated Text:</Text>
+                  <Box p={3} bg="blue.100" borderRadius="md">
+                    {translatedText || 'Waiting for translation...'}
+                  </Box>
+                </Box>
+              )}
+
+              {!isCallActive && (
+                <Box textAlign="center" p={4}>
+                  <WarningIcon w={8} h={8} color="gray.400" mb={3} />
+                  <Text color="gray.500">
+                    Start a call to begin real-time translation
+                  </Text>
+                </Box>
+              )}
+            </VStack>
+          </ModalBody>
+        </ModalContent>
+      </Modal>
+    </>
   );
-}
+};
 
 export default CallInterface;
