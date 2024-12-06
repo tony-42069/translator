@@ -1,18 +1,21 @@
 // src/services/TranslationService.js
 import ElevenLabsService from './ElevenLabsService';
+import 'dotenv/config'; // Use ES6 import since your code seems to use modern JavaScript syntax
+
 
 class TranslationService {
-  constructor() {
-    this.recognition = null;
-    this.isListening = false;
-    this.onResultCallback = null;
-    this.onErrorCallback = null;
-    this.currentLanguage = 'sq-AL'; // Default to Albanian
-    this.GOOGLE_API_KEY = 'AIzaSyBlVHAy0773a8uZNPryEMAQ0Dzp7ZwRFPI';
-    this.lastProcessedText = '';
-    this.processingQueue = [];
-    this.isProcessing = false;
-  }
+    constructor() {
+        this.recognition = null;
+        this.isListening = false;
+        this.onResultCallback = null;
+        this.onErrorCallback = null;
+        this.currentLanguage = 'sq-AL'; // Default to Albanian
+        this.GOOGLE_API_KEY = process.env.REACT_APP_GOOGLE_TRANSLATE_API_KEY; // Securely load the key
+        this.lastProcessedText = '';
+        this.processingQueue = [];
+        this.isProcessing = false;
+    }
+    
 
   initialize() {
     if (!('webkitSpeechRecognition' in window)) {
