@@ -1,11 +1,10 @@
 // src/services/ElevenLabsService.js
-import Sound from 'react-native-sound';
 
 class ElevenLabsService {
   constructor() {
     this.API_KEY = 'sk_9580cf8a87cd2ba112a7757a091d2300eb75e20776616553';
     this.API_URL = 'https://api.elevenlabs.io/v1';
-    this.voice_id = '21m00Tcm4TlvDq8ikWAM'; // Default voice ID - Rachel
+    this.voice_id = '21m00Tcm4TlvDq8ikWAM'; // Rachel voice
   }
 
   async textToSpeech(text, language = 'en') {
@@ -34,8 +33,10 @@ class ElevenLabsService {
         throw new Error('TTS request failed');
       }
 
-      const blob = await response.blob();
-      return await this.playAudioBlob(blob);
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      const audio = new Audio(audioUrl);
+      await audio.play();
 
     } catch (error) {
       console.error('ElevenLabs TTS error:', error);
@@ -43,35 +44,7 @@ class ElevenLabsService {
     }
   }
 
-  async playAudioBlob(blob) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64data = reader.result.split(',')[1];
-        
-        // Save the audio file temporarily
-        const audioPath = Sound.MAIN_BUNDLE + '/temp_audio.mp3';
-        
-        // Write base64 to file and play it
-        const sound = new Sound(audioPath, '', (error) => {
-          if (error) {
-            reject(error);
-            return;
-          }
-          
-          sound.play((success) => {
-            sound.release();
-            resolve(success);
-          });
-        });
-      };
-      
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  }
-
-  // Add method to get available voices
+  // Get available voices (useful for later)
   async getVoices() {
     try {
       const response = await fetch(`${this.API_URL}/voices`, {
