@@ -15,6 +15,8 @@ import {
   Badge,
 } from '@chakra-ui/react';
 import TranslationService from '../services/TranslationService';
+import SocketService from '../services/SocketService';
+import AudioService from '../services/AudioService';
 import CallInterface from './CallInterface';
 
 function TranslationApp() {
@@ -23,6 +25,7 @@ function TranslationApp() {
   const [currentLanguage, setCurrentLanguage] = useState('Albanian');
   const [error, setError] = useState(null);
   const [isCallModalOpen, setIsCallModalOpen] = useState(false);
+  const [isInCall, setIsInCall] = useState(false);
   const [usageStats, setUsageStats] = useState({
     characters: 0,
     requests: 0
@@ -44,7 +47,17 @@ function TranslationApp() {
       characters: prev.characters + original.length + translated.length,
       requests: prev.requests + 1
     }));
-  }, [currentLanguage]);
+
+    // If in a call, send translation to other participants
+    if (isInCall) {
+      SocketService.socket?.emit('translation-result', {
+        roomId: SocketService.roomId,
+        originalText: original,
+        translatedText: translated,
+        targetLanguage: currentLanguage === 'Albanian' ? 'en-US' : 'sq-AL'
+      });
+    }
+  }, [currentLanguage, isInCall]);
 
   const handleError = useCallback((error) => {
     setError(error.toString());
@@ -63,19 +76,55 @@ function TranslationApp() {
         handleTranslationResult,
         handleError
       );
+
+      // Set up socket handlers for translations
+      SocketService.setTranslationReceivedCallback((data) => {
+        const { originalText, translatedText, targetLanguage } = data;
+        setConversations(prev => [
+          ...prev,
+          {
+            original: originalText,
+            translated: translatedText,
+            timestamp: new Date().toLocaleTimeString(),
+            direction: targetLanguage === 'en-US' ? 'Albanian → English' : 'English → Albanian'
+          }
+        ].slice(-5));
+      });
+
+      // Set up socket handlers for audio
+      SocketService.setAudioReceivedCallback(async (audio, language) => {
+        try {
+          const result = await TranslationService.processAudioStream(
+            audio,
+            language,
+            currentLanguage === 'Albanian' ? 'en-US' : 'sq-AL'
+          );
+          handleTranslationResult(result.original, result.translated);
+        } catch (error) {
+          handleError(error);
+        }
+      });
     } catch (error) {
       setError('Speech recognition not supported in this browser. Please use Chrome.');
     }
-  }, [handleTranslationResult, handleError]);
+  }, [handleTranslationResult, handleError, currentLanguage]);
 
   const toggleListening = async () => {
     try {
       if (isListening) {
-        await TranslationService.stopListening();
+        if (isInCall) {
+          await AudioService.stopProcessing();
+        } else {
+          await TranslationService.stopListening();
+        }
         setIsListening(false);
       } else {
         setError(null);
-        await TranslationService.startListening();
+        if (isInCall) {
+          await SocketService.startStreaming();
+        } else {
+          await TranslationService.startListening();
+        }
         setIsListening(true);
       }
     } catch (error) {
@@ -87,6 +136,17 @@ function TranslationApp() {
     const newLang = currentLanguage === 'Albanian' ? 'English' : 'Albanian';
     setCurrentLanguage(newLang);
     TranslationService.setLanguage(newLang === 'Albanian' ? 'sq-AL' : 'en-US');
+  };
+
+  const handleCallStart = () => {
+    setIsInCall(true);
+    setIsListening(true);
+  };
+
+  const handleCallEnd = () => {
+    setIsInCall(false);
+    setIsListening(false);
+    setIsCallModalOpen(false);
   };
 
   return (
@@ -120,9 +180,9 @@ function TranslationApp() {
               <Button
                 colorScheme="purple"
                 onClick={() => setIsCallModalOpen(true)}
-                isDisabled={isListening}
+                isDisabled={isListening && !isInCall}
               >
-                Start Call
+                {isInCall ? 'Current Call' : 'Start Call'}
               </Button>
             </HStack>
           </CardBody>
@@ -161,12 +221,8 @@ function TranslationApp() {
 
         <CallInterface
           isOpen={isCallModalOpen}
-          onClose={() => {
-            setIsCallModalOpen(false);
-          }}
-          onCallStart={() => {
-            setIsListening(true);
-          }}
+          onClose={handleCallEnd}
+          onCallStart={handleCallStart}
         />
       </VStack>
     </Container>

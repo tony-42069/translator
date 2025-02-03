@@ -1,63 +1,109 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
+const cors = require('cors');
+
 const app = express();
-const http = require('http').createServer(app);
-const io = require('socket.io')(http, {
-  cors: {
-    origin: "http://localhost:3000",
-    methods: ["GET", "POST"]
-  }
+app.use(cors());
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "*" },
+  maxHttpBufferSize: 1e8
 });
 
-const connectedUsers = new Map();
+// Room and user management
+const rooms = new Map();
+const userLanguages = new Map();
 
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  socket.on('join-call', (callId) => {
-    console.log(`User ${socket.id} joining call ${callId}`);
-    socket.join(callId);
-    connectedUsers.set(socket.id, callId);
-    
-    // Notify others in the call
-    socket.to(callId).emit('user-joined', socket.id);
+  // Room creation
+  socket.on('create-room', (roomId) => {
+    console.log(`Creating room: ${roomId}`);
+    rooms.set(roomId, { 
+      initiator: socket.id,
+      users: new Set([socket.id])
+    });
+    socket.join(roomId);
+    socket.emit('room-created', roomId);
   });
 
-  socket.on('audio-data', (data) => {
-    const callId = connectedUsers.get(socket.id);
-    if (callId) {
-      // Broadcast audio data to others in the same call
-      socket.to(callId).emit('audio-data', {
-        userId: socket.id,
-        audioData: data.audioData,
-        language: data.language
+  // Room joining
+  socket.on('join-room', (roomId) => {
+    console.log(`User ${socket.id} joining room ${roomId}`);
+    const room = rooms.get(roomId);
+    if (room) {
+      room.users.add(socket.id);
+      socket.join(roomId);
+      socket.emit('room-joined', roomId);
+      socket.to(roomId).emit('user-joined', socket.id);
+    } else {
+      socket.emit('error', { message: 'Room not found' });
+    }
+  });
+
+  // Audio streaming
+  socket.on('audio-stream', (data) => {
+    const { roomId, audio, language } = data;
+    const room = rooms.get(roomId);
+    if (room && room.users.has(socket.id)) {
+      userLanguages.set(socket.id, language);
+      socket.to(roomId).emit('audio-stream', {
+        audio,
+        language,
+        userId: socket.id
       });
     }
   });
 
+  // Translation results
   socket.on('translation-result', (data) => {
-    const callId = connectedUsers.get(socket.id);
-    if (callId) {
-      // Broadcast translation to others in the same call
-      socket.to(callId).emit('translation-result', {
+    const { roomId, originalText, translatedText, targetLanguage } = data;
+    const room = rooms.get(roomId);
+    if (room && room.users.has(socket.id)) {
+      socket.to(roomId).emit('translation-result', {
         userId: socket.id,
-        originalText: data.originalText,
-        translatedText: data.translatedText,
-        language: data.language
+        originalText,
+        translatedText,
+        targetLanguage
       });
     }
   });
 
+  // Room leaving
+  socket.on('leave-room', (roomId) => {
+    handleUserLeaving(socket, roomId);
+  });
+
+  // Disconnection
   socket.on('disconnect', () => {
-    const callId = connectedUsers.get(socket.id);
-    if (callId) {
-      socket.to(callId).emit('user-left', socket.id);
-      connectedUsers.delete(socket.id);
-    }
     console.log('User disconnected:', socket.id);
+    // Clean up all rooms the user was in
+    for (const [roomId, room] of rooms.entries()) {
+      if (room.users.has(socket.id)) {
+        handleUserLeaving(socket, roomId);
+      }
+    }
+    userLanguages.delete(socket.id);
   });
 });
 
+function handleUserLeaving(socket, roomId) {
+  const room = rooms.get(roomId);
+  if (room) {
+    room.users.delete(socket.id);
+    socket.to(roomId).emit('user-left', socket.id);
+    
+    // If room is empty or initiator left, close the room
+    if (room.users.size === 0 || room.initiator === socket.id) {
+      rooms.delete(roomId);
+      io.to(roomId).emit('room-closed');
+    }
+  }
+}
+
 const PORT = process.env.PORT || 3001;
-http.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

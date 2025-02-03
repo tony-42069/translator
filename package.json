@@ -1,40 +1,36 @@
 {
-  "name": "albanian-translator",
-  "version": "0.1.0",
-  "private": true,
+  "name": "albanian-voice-translator",
+  "version": "1.0.0",
+  "description": "Real-time voice translation application for Albanian and English",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "concurrently \"nodemon server.js\" \"react-scripts start\"",
+    "build": "react-scripts build",
+    "test": "node src/tests/socketTest.js",
+    "eject": "react-scripts eject"
+  },
   "dependencies": {
-    "@chakra-ui/react": "^2.10.4",
-    "@emotion/react": "^11.13.5",
-    "@emotion/styled": "^11.13.5",
-    "axios": "^1.6.2",
-    "browserify-fs": "^1.0.0",
-    "buffer": "^6.0.3",
-    "copy-to-clipboard": "^3.3.3",
-    "crypto-browserify": "^3.12.1",
-    "dotenv": "^16.4.7",
-    "events": "^3.3.0",
-    "framer-motion": "^10.18.0",
-    "os-browserify": "^0.3.0",
-    "path-browserify": "^1.0.1",
-    "process": "^0.11.10",
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.11.3",
+    "@emotion/styled": "^11.11.0",
+    "axios": "^1.6.5",
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "framer-motion": "^10.17.9",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
-    "simple-peer": "^9.11.1",
-    "util": "^0.12.5",
-    "web-vitals": "^2.1.4",
-    "webrtc-adapter": "^9.0.1"
+    "socket.io": "^4.7.4",
+    "socket.io-client": "^4.7.4"
   },
-  "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "nodemon": "^3.0.2"
   },
   "eslintConfig": {
     "extends": [
-      "react-app",
-      "react-app/jest"
+      "react-app"
     ]
   },
   "browserslist": {
