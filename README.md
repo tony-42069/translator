@@ -112,6 +112,20 @@ albanian-translator/
 - Regular security audits and updates
 - Secure WebSocket connections
 
+## Security Notice ⚠️
+
+**IMPORTANT:** This application requires API keys for Google Cloud Translation and ElevenLabs. Never commit these keys to version control!
+
+1. Create a `.env` file based on `.env.example`
+2. Add your API keys to `.env`
+3. Ensure `.env` is in your `.gitignore`
+4. Never share or expose your API keys
+
+If you accidentally commit API keys:
+1. Immediately revoke and regenerate the exposed keys
+2. Contact the service provider's security team
+3. Review your git history for other potential exposures
+
 ## Testing
 
 Run the test suite to verify functionality:
