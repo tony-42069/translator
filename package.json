@@ -5,24 +5,32 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "concurrently \"nodemon server.js\" \"react-scripts start\"",
-    "build": "react-scripts build",
+    "dev": "concurrently \"nodemon server.js\" \"craco start\"",
+    "build": "craco build",
     "test": "node src/tests/socketTest.js",
-    "eject": "react-scripts eject"
+    "eject": "craco eject"
   },
   "dependencies": {
+    "@chakra-ui/icons": "^2.2.4",
     "@chakra-ui/react": "^2.8.2",
+    "@craco/craco": "^7.1.0",
     "@emotion/react": "^11.11.3",
     "@emotion/styled": "^11.11.0",
+    "@stripe/stripe-js": "^5.6.0",
     "axios": "^1.6.5",
+    "buffer": "^6.0.3",
     "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
     "express": "^4.18.2",
     "framer-motion": "^10.17.9",
+    "process": "^0.11.10",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-router-dom": "^7.1.5",
     "react-scripts": "5.0.1",
     "socket.io": "^4.7.4",
-    "socket.io-client": "^4.7.4"
+    "socket.io-client": "^4.7.4",
+    "stripe": "^17.6.0"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

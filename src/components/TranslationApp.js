@@ -13,13 +13,18 @@ import {
   Switch,
   HStack,
   Badge,
+  useDisclosure,
 } from '@chakra-ui/react';
 import TranslationService from '../services/TranslationService';
 import SocketService from '../services/SocketService';
 import AudioService from '../services/AudioService';
+import PaymentService from '../services/PaymentService';
 import CallInterface from './CallInterface';
+import SubscriptionModal from './SubscriptionModal';
 
 function TranslationApp() {
+  const { isOpen: isSubscriptionOpen, onOpen: onSubscriptionOpen, onClose: onSubscriptionClose } = useDisclosure();
+  const [subscription, setSubscription] = useState(null);
   const [isListening, setIsListening] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [currentLanguage, setCurrentLanguage] = useState('Albanian');
@@ -138,7 +143,24 @@ function TranslationApp() {
     TranslationService.setLanguage(newLang === 'Albanian' ? 'sq-AL' : 'en-US');
   };
 
+  // Check subscription status
+  useEffect(() => {
+    const checkSubscription = async () => {
+      try {
+        const sub = await PaymentService.getCurrentSubscription();
+        setSubscription(sub);
+      } catch (error) {
+        console.error('Error checking subscription:', error);
+      }
+    };
+    checkSubscription();
+  }, []);
+
   const handleCallStart = () => {
+    if (!subscription?.subscription) {
+      onSubscriptionOpen();
+      return;
+    }
     setIsInCall(true);
     setIsListening(true);
   };
@@ -177,13 +199,22 @@ function TranslationApp() {
                 <Text fontSize="sm">Characters Translated: {usageStats.characters}</Text>
                 <Text fontSize="sm">API Requests: {usageStats.requests}</Text>
               </Box>
-              <Button
-                colorScheme="purple"
-                onClick={() => setIsCallModalOpen(true)}
-                isDisabled={isListening && !isInCall}
-              >
-                {isInCall ? 'Current Call' : 'Start Call'}
-              </Button>
+          <VStack spacing={2}>
+            {subscription?.subscription ? (
+              <Badge colorScheme="green">
+                {subscription.subscription.plan.nickname || 'Active Subscription'}
+              </Badge>
+            ) : (
+              <Badge colorScheme="yellow">Free Trial</Badge>
+            )}
+            <Button
+              colorScheme="purple"
+              onClick={() => setIsCallModalOpen(true)}
+              isDisabled={isListening && !isInCall}
+            >
+              {isInCall ? 'Current Call' : 'Start Call'}
+            </Button>
+          </VStack>
             </HStack>
           </CardBody>
         </Card>
@@ -223,6 +254,11 @@ function TranslationApp() {
           isOpen={isCallModalOpen}
           onClose={handleCallEnd}
           onCallStart={handleCallStart}
+        />
+        
+        <SubscriptionModal 
+          isOpen={isSubscriptionOpen} 
+          onClose={onSubscriptionClose} 
         />
       </VStack>
     </Container>
